@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   fetchSwagger: () => ipcRenderer.invoke('fetch-swagger'),
+  saveFile:       (opts) => ipcRenderer.invoke('save-file', opts),
+  showInFolder:   (fp)   => ipcRenderer.invoke('show-in-folder', fp),
   apiRequest:   (opts) => ipcRenderer.invoke('api-request', opts),
   key: {
     load:  ()    => ipcRenderer.invoke('key:load'),

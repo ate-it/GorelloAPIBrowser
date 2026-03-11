@@ -5,6 +5,7 @@ const state = {
   spec: null,
   activeEndpoint: null, // { path, method, op }
   paramInputs: {},      // inputEl refs keyed by param name
+  history: [],          // last 50 requests
 };
 
 const BASE_URL = 'https://api.usw.gorelo.io';
@@ -51,6 +52,23 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   $('try-btn').addEventListener('click', sendRequest);
+  $('curl-btn').addEventListener('click', copyAsCurl);
+  $('export-json-btn').addEventListener('click', exportResponse);
+  $('history-clear-btn').addEventListener('click', () => { state.history = []; renderHistory(); });
+
+  // Sidebar tabs
+  document.querySelectorAll('.sidebar-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sidebar-tab').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const isHistory = btn.dataset.pane === 'history';
+      $('sidebar-pane-endpoints').style.display = isHistory ? 'none' : '';
+      $('sidebar-pane-history').style.display   = isHistory ? ''     : 'none';
+      if (isHistory) renderHistory();
+    });
+  });
+
+  initCommandPalette();
 
   // Response tabs
   document.querySelectorAll('.tab-btn').forEach((btn) => {
@@ -70,6 +88,13 @@ function initTitleBar() {
   $('win-max').onclick   = () => window.electronAPI.win.maximize();
   $('win-close').onclick = () => window.electronAPI.win.close();
 
+  // Light/dark toggle
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  if (savedTheme === 'light') applyTheme('light');
+  $('theme-toggle').addEventListener('click', () => {
+    applyTheme(document.documentElement.classList.contains('light') ? 'dark' : 'light');
+  });
+
   // Swap the maximise icon between □ and ❐ when the window state changes
   window.electronAPI.win.onMaximized((isMax) => {
     const svg = $('win-max').querySelector('svg');
@@ -77,6 +102,19 @@ function initTitleBar() {
       ? '<path d="M1 4h7v7H1z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M3.5 4V2H10v7H8" stroke="currentColor" stroke-width="1.2" fill="none"/>'
       : '<rect x=".6" y=".6" width="8.8" height="8.8" rx=".8" stroke="currentColor" stroke-width="1.2" fill="none"/>';
   });
+}
+
+function applyTheme(mode) {
+  if (mode === 'light') {
+    document.documentElement.classList.add('light');
+    $('theme-icon-moon').style.display = 'none';
+    $('theme-icon-sun').style.display  = '';
+  } else {
+    document.documentElement.classList.remove('light');
+    $('theme-icon-moon').style.display = '';
+    $('theme-icon-sun').style.display  = 'none';
+  }
+  localStorage.setItem('theme', mode);
 }
 
 // ── Update banner ─────────────────────────────────────────────
@@ -463,8 +501,11 @@ async function sendRequest() {
   resetResponse();
 
   try {
-    const result = await window.electronAPI.apiRequest({ method: method.toUpperCase(), url, headers, body });
-    showResponse(result);
+    const t0       = performance.now();
+    const result   = await window.electronAPI.apiRequest({ method: method.toUpperCase(), url, headers, body });
+    const duration = Math.round(performance.now() - t0);
+    showResponse(result, duration);
+    addHistoryEntry({ method: method.toLowerCase(), path: state.activeEndpoint.path, status: result.status, duration, timestamp: Date.now() });
   } catch (err) {
     $('response-section').style.display = '';
     $('response-status-badge').textContent  = 'Error';
@@ -478,13 +519,18 @@ async function sendRequest() {
 }
 
 // ── Show response ─────────────────────────────────────────────
-function showResponse({ status, headers, body }) {
+function showResponse({ status, headers, body }, duration) {
   const section = $('response-section');
   section.style.display = '';
 
   const badge = $('response-status-badge');
   badge.textContent = status;
   badge.className   = status >= 500 ? 'status-5xx' : status >= 400 ? 'status-4xx' : 'status-2xx';
+
+  const durEl = $('response-duration');
+  if (duration != null) { durEl.textContent = `${duration}ms`; durEl.style.display = ''; }
+  else                  { durEl.style.display = 'none'; }
+  $('export-json-btn').style.display = '';
 
   // Pretty-print body
   let display = body;
@@ -504,9 +550,11 @@ function showResponse({ status, headers, body }) {
 }
 
 function resetResponse() {
-  $('response-section').style.display = 'none';
-  $('response-body').textContent      = '';
-  $('response-headers').textContent   = '';
+  $('response-section').style.display  = 'none';
+  $('response-body').textContent       = '';
+  $('response-headers').textContent    = '';
+  $('response-duration').style.display = 'none';
+  $('export-json-btn').style.display   = 'none';
 }
 
 // ── Build response schema blocks ──────────────────────────────
@@ -617,4 +665,237 @@ function syntaxHighlight(json) {
 
 function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── Copy as cURL ───────────────────────────────────────────────
+function buildCurlCommand() {
+  if (!state.activeEndpoint) return null;
+  let { path, method } = state.activeEndpoint;
+
+  Object.entries(state.paramInputs).forEach(([name, input]) => {
+    if (input.dataset.in === 'path')
+      path = path.replace(`{${name}}`, encodeURIComponent(input.value || `{${name}}`));
+  });
+  const queryParts = [];
+  Object.entries(state.paramInputs).forEach(([name, input]) => {
+    if (input.dataset.in === 'query' && input.value)
+      queryParts.push(`${encodeURIComponent(name)}=${encodeURIComponent(input.value)}`);
+  });
+  const url = `${BASE_URL}${path}${queryParts.length ? '?' + queryParts.join('&') : ''}`;
+
+  const token = $('auth-token').value.trim();
+  const headerLines = [`  -H 'Content-Type: application/json'`, `  -H 'Accept: application/json'`];
+  if (token) headerLines.unshift(`  -H 'Authorization: Bearer ${token}'`);
+  Object.entries(state.paramInputs).forEach(([name, input]) => {
+    if (input.dataset.in === 'header' && input.value)
+      headerLines.push(`  -H '${name}: ${input.value}'`);
+  });
+
+  const parts = [`curl -X ${method.toUpperCase()}`, ...headerLines];
+  const raw = $('body-section').style.display !== 'none' ? $('body-editor').value.trim() : '';
+  if (raw) parts.push(`  -d '${raw.replace(/'/g, "'\\''")}'`);
+  parts.push(`  '${url}'`);
+  return parts.join(' \\\n');
+}
+
+async function copyAsCurl() {
+  const cmd = buildCurlCommand();
+  if (!cmd) return;
+  try {
+    await navigator.clipboard.writeText(cmd);
+    const btn = $('curl-btn');
+    const orig = btn.innerHTML;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  } catch { /* clipboard denied */ }
+}
+
+// ── Export response ────────────────────────────────────────────
+async function exportResponse() {
+  const raw = $('response-body').textContent;
+  if (!raw) return;
+  let content = raw;
+  try { content = JSON.stringify(JSON.parse(raw), null, 2); } catch { /* use raw */ }
+  const { path: ep, method } = state.activeEndpoint || {};
+  const defaultName = ep
+    ? `${method}-${ep.replace(/\//g, '-').replace(/[{}]/g, '').replace(/^-/, '')}.json`
+    : 'response.json';
+  const { saved, filePath } = await window.electronAPI.saveFile({ defaultName, content });
+  if (saved) showToast('Saved to Downloads', filePath);
+}
+
+function showToast(message, filePath) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <span>${escapeHtml(message)}</span>
+    <button class="toast-folder-btn">Show in folder</button>
+    <button class="toast-close-btn">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>`;
+  document.body.appendChild(toast);
+
+  const dismiss = () => {
+    toast.classList.add('toast-exit');
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+  };
+
+  toast.querySelector('.toast-folder-btn').onclick = () => {
+    window.electronAPI.showInFolder(filePath);
+    dismiss();
+  };
+  toast.querySelector('.toast-close-btn').onclick = dismiss;
+  setTimeout(dismiss, 5000);
+  requestAnimationFrame(() => toast.classList.add('toast-visible'));
+}
+
+// ── Request history ────────────────────────────────────────────
+function addHistoryEntry(entry) {
+  state.history.unshift(entry);
+  if (state.history.length > 50) state.history.pop();
+}
+
+function renderHistory() {
+  const list = $('history-list');
+  if (!state.history.length) {
+    list.innerHTML = '<div class="history-empty">No requests yet this session.</div>';
+    return;
+  }
+  list.innerHTML = state.history.map((e, i) => {
+    const cls = e.status >= 500 ? 'status-5xx' : e.status >= 400 ? 'status-4xx' : 'status-2xx';
+    return `
+      <div class="history-item" data-index="${i}">
+        <span class="method-pill pill-${e.method}">${e.method.toUpperCase()}</span>
+        <span class="history-path" title="${escapeHtml(e.path)}">${escapeHtml(e.path)}</span>
+        <span class="history-meta">
+          <span class="history-status ${cls}">${e.status}</span>
+          <span class="history-duration">${e.duration}ms</span>
+          <span class="history-time">${relativeTime(e.timestamp)}</span>
+        </span>
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('.history-item').forEach((el) => {
+    el.addEventListener('click', () => {
+      const entry = state.history[+el.dataset.index];
+      document.querySelector('.sidebar-tab[data-pane="endpoints"]').click();
+      const navItem = document.querySelector(
+        `.endpoint-item[data-path="${CSS.escape(entry.path)}"][data-method="${entry.method}"]`
+      );
+      if (navItem) navItem.click();
+    });
+  });
+}
+
+function relativeTime(ts) {
+  const d = Date.now() - ts;
+  if (d < 60000)   return `${Math.round(d / 1000)}s ago`;
+  if (d < 3600000) return `${Math.round(d / 60000)}m ago`;
+  return `${Math.round(d / 3600000)}h ago`;
+}
+
+// ── Command palette ────────────────────────────────────────────
+function initCommandPalette() {
+  let currentFiltered = [];
+  let selectedIndex   = 0;
+
+  function allEndpoints() {
+    if (!state.spec) return [];
+    const METHODS = ['get','post','put','patch','delete','head','options'];
+    const items = [];
+    Object.entries(state.spec.paths || {}).forEach(([path, pathObj]) => {
+      METHODS.forEach((method) => {
+        const op = pathObj[method];
+        if (op) items.push({ path, method, op });
+      });
+    });
+    return items;
+  }
+
+  function open() {
+    $('cmd-palette-input').value = '';
+    selectedIndex = 0;
+    renderResults('');
+    $('cmd-palette-backdrop').style.display = 'flex';
+    setTimeout(() => $('cmd-palette-input').focus(), 30);
+  }
+
+  function close() {
+    $('cmd-palette-backdrop').style.display = 'none';
+  }
+
+  function renderResults(query) {
+    const q = query.toLowerCase();
+    const all = allEndpoints();
+    currentFiltered = q
+      ? all.filter((i) => `${i.method} ${i.path}`.toLowerCase().includes(q))
+      : all;
+    currentFiltered = currentFiltered.slice(0, 60);
+    selectedIndex = Math.min(selectedIndex, currentFiltered.length - 1);
+
+    $('cmd-palette-results').innerHTML = currentFiltered.map((item, idx) => `
+      <div class="palette-item ${idx === selectedIndex ? 'selected' : ''}" data-index="${idx}">
+        <span class="method-pill pill-${item.method}">${item.method.toUpperCase()}</span>
+        <span class="palette-path">${escapeHtml(item.path)}</span>
+        ${item.op.summary ? `<span class="palette-summary">${escapeHtml(item.op.summary)}</span>` : ''}
+      </div>`).join('');
+
+    $('cmd-palette-results').querySelectorAll('.palette-item').forEach((el) => {
+      el.addEventListener('mouseenter', () => {
+        selectedIndex = +el.dataset.index;
+        document.querySelectorAll('.palette-item').forEach((e, i) => e.classList.toggle('selected', i === selectedIndex));
+      });
+      el.addEventListener('click', () => { navigateTo(currentFiltered[+el.dataset.index]); close(); });
+    });
+  }
+
+  function scrollSelected() {
+    const sel = $('cmd-palette-results').querySelector('.palette-item.selected');
+    if (sel) sel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function navigateTo({ path, method, op }) {
+    document.querySelectorAll('.endpoint-item.active').forEach((el) => el.classList.remove('active'));
+    const navItem = document.querySelector(`.endpoint-item[data-path="${CSS.escape(path)}"][data-method="${method}"]`);
+    if (navItem) {
+      navItem.classList.add('active');
+      navItem.closest('.tag-group')?.classList.remove('collapsed');
+      navItem.scrollIntoView({ block: 'nearest' });
+    }
+    showEndpoint(path, method, op);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const open_ = $('cmd-palette-backdrop').style.display !== 'none';
+    if (e.ctrlKey && e.key === 'k') { e.preventDefault(); open_ ? close() : open(); return; }
+    if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); sendRequest(); return; }
+    if (!open_) return;
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = Math.min(selectedIndex + 1, currentFiltered.length - 1);
+      document.querySelectorAll('.palette-item').forEach((el, i) => el.classList.toggle('selected', i === selectedIndex));
+      scrollSelected();
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = Math.max(selectedIndex - 1, 0);
+      document.querySelectorAll('.palette-item').forEach((el, i) => el.classList.toggle('selected', i === selectedIndex));
+      scrollSelected();
+    }
+    if (e.key === 'Enter') {
+      const item = currentFiltered[selectedIndex];
+      if (item) { navigateTo(item); close(); }
+    }
+  });
+
+  $('cmd-palette-input').addEventListener('input', (e) => {
+    selectedIndex = 0;
+    renderResults(e.target.value.trim());
+  });
+
+  $('cmd-palette-backdrop').addEventListener('click', (e) => {
+    if (e.target === $('cmd-palette-backdrop')) close();
+  });
 }

@@ -73,6 +73,22 @@ function checkForUpdates(win) {
 ipcMain.handle('update:open-url', (_event, url) => shell.openExternal(url));
 ipcMain.handle('app:version',    () => app.getVersion());
 
+ipcMain.handle('save-file', (_event, { defaultName, content }) => {
+  const dir  = app.getPath('downloads');
+  const ext  = path.extname(defaultName);
+  const base = path.basename(defaultName, ext);
+  let filePath = path.join(dir, defaultName);
+  let i = 1;
+  while (fs.existsSync(filePath)) {
+    filePath = path.join(dir, `${base}-${i}${ext}`);
+    i++;
+  }
+  fs.writeFileSync(filePath, content, 'utf8');
+  return { saved: true, filePath };
+});
+
+ipcMain.handle('show-in-folder', (_event, filePath) => shell.showItemInFolder(filePath));
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
