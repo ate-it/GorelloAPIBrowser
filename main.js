@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, net } = require('electron');
+const { app, BrowserWindow, ipcMain, net, shell } = require('electron');
 const path = require('path');
 const fs   = require('fs');
 const crypto = require('crypto');
@@ -33,7 +33,45 @@ function decryptKey(data) {
   return decipher.update(enc).toString('utf8') + decipher.final('utf8');
 }
 
-const SWAGGER_URL = 'https://api.usw.gorelo.io/swagger/v1/swagger.json';
+const SWAGGER_URL  = 'https://api.usw.gorelo.io/swagger/v1/swagger.json';
+const RELEASES_URL = 'https://api.github.com/repos/ate-it/GorelloAPIBrowser/releases/latest';
+
+// ── Update check ──────────────────────────────────────────────
+function newerVersion(current, latest) {
+  const parse = (v) => v.replace(/^v/, '').split('.').map(Number);
+  const [ca, cb, cc] = parse(current);
+  const [la, lb, lc] = parse(latest);
+  return la > ca || (la === ca && lb > cb) || (la === ca && lb === cb && lc > cc);
+}
+
+function checkForUpdates(win) {
+  const request = net.request({
+    url: RELEASES_URL,
+    headers: { 'User-Agent': 'gorelo-api-browser' },
+  });
+  let data = '';
+
+  request.on('response', (response) => {
+    response.on('data',  (chunk) => { data += chunk.toString(); });
+    response.on('end',   () => {
+      try {
+        const { tag_name, html_url } = JSON.parse(data);
+        if (tag_name && newerVersion(app.getVersion(), tag_name)) {
+          win.webContents.send('update:available', {
+            version: tag_name.replace(/^v/, ''),
+            url: html_url,
+          });
+        }
+      } catch { /* silently ignore parse errors */ }
+    });
+  });
+
+  request.on('error', () => { /* silently ignore network errors */ });
+  request.end();
+}
+
+ipcMain.handle('update:open-url', (_event, url) => shell.openExternal(url));
+ipcMain.handle('app:version',    () => app.getVersion());
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -55,6 +93,8 @@ function createWindow() {
 
   win.once('ready-to-show', () => {
     win.show();
+    // Check for updates after a short delay so startup isn't blocked
+    setTimeout(() => checkForUpdates(win), 3000);
   });
 }
 

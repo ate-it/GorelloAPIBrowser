@@ -29,6 +29,7 @@ function showScreen(name) {
 window.addEventListener('DOMContentLoaded', () => {
   initKeyModal();
   initApp();
+  initUpdateBanner();
 
   $('retry-btn').addEventListener('click', loadSwagger);
 
@@ -61,6 +62,19 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// ── Update banner ─────────────────────────────────────────────
+function initUpdateBanner() {
+  window.electronAPI.update.onAvailable(async ({ version, url }) => {
+    const current = await window.electronAPI.appVersion();
+    $('update-banner-text').innerHTML =
+      `<strong>v${version}</strong> is available — you're on v${current}.`;
+    $('update-banner').style.display = 'flex';
+
+    $('update-view-btn').onclick    = () => window.electronAPI.update.openUrl(url);
+    $('update-dismiss-btn').onclick = () => { $('update-banner').style.display = 'none'; };
+  });
+}
 
 // ── API key management ────────────────────────────────────────
 function setKeyStatusBar(hasKey) {

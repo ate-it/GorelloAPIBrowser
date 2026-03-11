@@ -656,6 +656,57 @@ body { display: flex; }
 .json-bool    { color: #c084fc; }
 .json-null    { color: #6b7280; }
 
+/* ── Update banner ──────────────────────────────────────────── */
+#update-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  background: linear-gradient(90deg, rgba(59,130,246,.18), rgba(99,102,241,.18));
+  border-bottom: 1px solid rgba(99,102,241,.35);
+  font-size: 12px;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#update-banner svg { flex-shrink: 0; color: var(--blue-light); }
+
+#update-banner-text { flex: 1; }
+
+#update-banner-text strong { color: var(--blue-light); }
+
+#update-view-btn {
+  background: var(--blue);
+  border: none;
+  border-radius: var(--radius);
+  padding: 4px 12px;
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+
+#update-view-btn:hover { background: #2563eb; }
+
+#update-dismiss-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: color .15s;
+  flex-shrink: 0;
+}
+
+#update-dismiss-btn:hover { color: var(--text-primary); }
+
 /* ── Scrollbar ──────────────────────────────────────────────── */
 #main::-webkit-scrollbar { width: 6px; }
 #main::-webkit-scrollbar-track { background: transparent; }

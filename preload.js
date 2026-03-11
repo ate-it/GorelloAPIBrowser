@@ -8,4 +8,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     save:  (key) => ipcRenderer.invoke('key:save', key),
     clear: ()    => ipcRenderer.invoke('key:clear'),
   },
+  update: {
+    onAvailable: (cb) => ipcRenderer.on('update:available', (_e, info) => cb(info)),
+    openUrl:     (url) => ipcRenderer.invoke('update:open-url', url),
+  },
+  appVersion: () => ipcRenderer.invoke('app:version'),
 });
