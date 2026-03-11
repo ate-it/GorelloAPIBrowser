@@ -1,6 +1,6 @@
 {
   "name": "gorelo-api-browser",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Gorelo API Explorer",
   "main": "main.js",
   "scripts": {
