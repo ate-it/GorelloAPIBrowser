@@ -84,8 +84,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    titleBarStyle: 'default',
-    backgroundColor: '#0f172a',
+    frame: false,
+    backgroundColor: '#1e293b',
     show: false,
   });
 
@@ -93,10 +93,20 @@ function createWindow() {
 
   win.once('ready-to-show', () => {
     win.show();
-    // Check for updates after a short delay so startup isn't blocked
     setTimeout(() => checkForUpdates(win), 3000);
   });
+
+  win.on('maximize',   () => win.webContents.send('win:maximized', true));
+  win.on('unmaximize', () => win.webContents.send('win:maximized', false));
 }
+
+// ── Window control IPC ────────────────────────────────────────
+ipcMain.on('win:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize());
+ipcMain.on('win:maximize', (e) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  w?.isMaximized() ? w.unmaximize() : w.maximize();
+});
+ipcMain.on('win:close',    (e) => BrowserWindow.fromWebContents(e.sender)?.close());
 
 // ── API key IPC handlers ──────────────────────────────────────
 ipcMain.handle('key:load', () => {

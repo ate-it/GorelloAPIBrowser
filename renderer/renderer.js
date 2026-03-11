@@ -27,6 +27,7 @@ function showScreen(name) {
 
 // ── Bootstrap ────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
+  initTitleBar();
   initKeyModal();
   initApp();
   initUpdateBanner();
@@ -62,6 +63,21 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// ── Title bar controls ────────────────────────────────────────
+function initTitleBar() {
+  $('win-min').onclick   = () => window.electronAPI.win.minimize();
+  $('win-max').onclick   = () => window.electronAPI.win.maximize();
+  $('win-close').onclick = () => window.electronAPI.win.close();
+
+  // Swap the maximise icon between □ and ❐ when the window state changes
+  window.electronAPI.win.onMaximized((isMax) => {
+    const svg = $('win-max').querySelector('svg');
+    svg.innerHTML = isMax
+      ? '<path d="M1 4h7v7H1z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M3.5 4V2H10v7H8" stroke="currentColor" stroke-width="1.2" fill="none"/>'
+      : '<rect x=".6" y=".6" width="8.8" height="8.8" rx=".8" stroke="currentColor" stroke-width="1.2" fill="none"/>';
+  });
+}
 
 // ── Update banner ─────────────────────────────────────────────
 function initUpdateBanner() {

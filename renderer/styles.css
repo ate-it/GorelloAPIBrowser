@@ -32,12 +32,68 @@ html, body {
 }
 
 /* ── Layout ─────────────────────────────────────────────────── */
-body { display: flex; }
+body { display: flex; flex-direction: column; }
+
+/* ── Custom title bar ───────────────────────────────────────── */
+#titlebar {
+  height: 36px;
+  min-height: 36px;
+  background: var(--bg-800);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  -webkit-app-region: drag;
+  user-select: none;
+  flex-shrink: 0;
+  padding-left: 14px;
+}
+
+#titlebar-drag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+#win-controls {
+  display: flex;
+  align-items: stretch;
+  height: 36px;
+  -webkit-app-region: no-drag;
+}
+
+#win-controls button {
+  width: 46px;
+  height: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s, color .1s;
+  font-size: 0;
+}
+
+#win-min:hover, #win-max:hover { background: var(--bg-700); color: var(--text-primary); }
+#win-close:hover               { background: #c42b1c;       color: white; }
+
+#app-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
 
 #sidebar {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
-  height: 100vh;
+  height: 100%;
   background: var(--bg-800);
   border-right: 1px solid var(--border);
   display: flex;
@@ -47,7 +103,7 @@ body { display: flex; }
 
 #main {
   flex: 1;
-  height: 100vh;
+  height: 100%;
   overflow-y: auto;
   background: var(--bg-900);
   position: relative;
