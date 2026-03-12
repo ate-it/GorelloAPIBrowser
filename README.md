@@ -3,6 +3,7 @@
 A desktop application for exploring and testing the [Gorelo Public API](https://api.usw.gorelo.io/swagger/v1/swagger.json). Fetches the latest API specification on every launch so you're always working against the current API.
 
 ![Windows](https://img.shields.io/badge/platform-Windows-blue)
+![macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![Linux](https://img.shields.io/badge/platform-Linux-orange)
 ![Release](https://img.shields.io/github/v/release/ate-it/GorelloAPIBrowser)
 
@@ -41,6 +42,15 @@ Download the latest release from the [Releases](../../releases) page:
 | `Gorelo API Browser Setup x.x.x.exe` | NSIS installer — installs to Program Files with a Start Menu entry |
 | `Gorelo API Browser-x.x.x-portable.exe` | Portable — runs directly, no installation needed |
 
+### macOS
+
+| File | Description |
+|------|-------------|
+| `Gorelo API Browser-x.x.x.dmg` | Disk image — open, drag to Applications |
+| `Gorelo API Browser-x.x.x-mac.zip` | Zip archive — extract and run (Intel + Apple Silicon) |
+
+> **Note:** The app is unsigned. On first launch, right-click → Open to bypass Gatekeeper.
+
 ### Linux
 
 | File | Description |
@@ -61,7 +71,7 @@ sudo dpkg -i gorelo-api-browser_x.x.x_amd64.deb
 
 On first launch you will be prompted for your Gorelo API key. You can choose to:
 
-- **Remember on this device** — the key is encrypted with AES-256-GCM using a machine-derived key and stored at `%APPDATA%\gorelo-api-browser\api-key.enc` (Windows) or `~/.config/gorelo-api-browser/api-key.enc` (Linux). It is automatically loaded on subsequent launches.
+- **Remember on this device** — the key is encrypted with AES-256-GCM using a machine-derived key and stored at `%APPDATA%\gorelo-api-browser\api-key.enc` (Windows), `~/Library/Application Support/gorelo-api-browser/api-key.enc` (macOS), or `~/.config/gorelo-api-browser/api-key.enc` (Linux). It is automatically loaded on subsequent launches.
 - **Skip for now** — the key is held in memory for the session only and not written to disk.
 
 The key status is always visible in the sidebar. Use the **Change** button to update it or **Remove** to delete the stored key.
@@ -89,6 +99,9 @@ npm run build
 # Build Linux AppImage + deb
 npm run build:linux
 
+# Build macOS dmg + zip
+npm run build:mac
+
 # Build to a directory (faster, no installer — useful for testing)
 npm run build:dir
 ```
@@ -100,5 +113,5 @@ Output goes to `dist/`.
 Every push to `main` automatically:
 
 1. Bumps the patch version in `package.json` and commits it back
-2. Builds Windows (NSIS installer + portable `.exe`) and Linux (AppImage + `.deb`) in parallel
+2. Builds Windows (NSIS installer + portable `.exe`), macOS (DMG + zip, Intel + Apple Silicon), and Linux (AppImage + `.deb`) in parallel
 3. Publishes a [GitHub Release](../../releases) with all artifacts attached and auto-generated release notes
