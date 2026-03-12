@@ -1,6 +1,6 @@
 {
   "name": "gorelo-api-browser",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Gorelo API Explorer",
   "main": "main.js",
   "scripts": {
@@ -16,11 +16,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -28,11 +32,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "Development"
