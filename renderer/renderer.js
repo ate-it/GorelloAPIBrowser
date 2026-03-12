@@ -122,7 +122,7 @@ function initUpdateBanner() {
   window.electronAPI.update.onAvailable(async ({ version, url }) => {
     const current = await window.electronAPI.appVersion();
     $('update-banner-text').innerHTML =
-      `<strong>v${version}</strong> is available — you're on v${current}.`;
+      `<strong>v${version}</strong> is available - you're on v${current}.`;
     $('update-banner').style.display = 'flex';
 
     $('update-view-btn').onclick    = () => window.electronAPI.update.openUrl(url);
@@ -173,7 +173,7 @@ function initKeyModal() {
     hideKeyModal();
   });
 
-  // Skip button — just dismisses, does not clear anything
+  // Skip button - just dismisses, does not clear anything
   $('key-modal-skip').addEventListener('click', () => {
     hideKeyModal();
   });
