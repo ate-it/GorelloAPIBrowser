@@ -1,8 +1,9 @@
 # Gorelo API Browser
 
-A Windows desktop application for exploring and testing the [Gorelo Public API](https://api.usw.gorelo.io/swagger/v1/swagger.json). Fetches the latest API specification on every launch so you're always working against the current API.
+A desktop application for exploring and testing the [Gorelo Public API](https://api.usw.gorelo.io/swagger/v1/swagger.json). Fetches the latest API specification on every launch so you're always working against the current API.
 
 ![Windows](https://img.shields.io/badge/platform-Windows-blue)
+![Linux](https://img.shields.io/badge/platform-Linux-orange)
 ![Release](https://img.shields.io/github/v/release/ate-it/GorelloAPIBrowser)
 
 ## Features
@@ -33,16 +34,34 @@ A Windows desktop application for exploring and testing the [Gorelo Public API](
 
 Download the latest release from the [Releases](../../releases) page:
 
+### Windows
+
 | File | Description |
 |------|-------------|
 | `Gorelo API Browser Setup x.x.x.exe` | NSIS installer — installs to Program Files with a Start Menu entry |
 | `Gorelo API Browser-x.x.x-portable.exe` | Portable — runs directly, no installation needed |
 
+### Linux
+
+| File | Description |
+|------|-------------|
+| `Gorelo API Browser-x.x.x.AppImage` | AppImage — make executable and run, no install needed |
+| `gorelo-api-browser_x.x.x_amd64.deb` | Debian/Ubuntu package — install with `dpkg -i` |
+
+```bash
+# AppImage
+chmod +x "Gorelo API Browser-x.x.x.AppImage"
+./"Gorelo API Browser-x.x.x.AppImage"
+
+# Debian/Ubuntu
+sudo dpkg -i gorelo-api-browser_x.x.x_amd64.deb
+```
+
 ## API Key
 
 On first launch you will be prompted for your Gorelo API key. You can choose to:
 
-- **Remember on this device** — the key is encrypted with AES-256-GCM using a machine-derived key and stored at `%APPDATA%\gorelo-api-browser\api-key.enc`. It is automatically loaded on subsequent launches.
+- **Remember on this device** — the key is encrypted with AES-256-GCM using a machine-derived key and stored at `%APPDATA%\gorelo-api-browser\api-key.enc` (Windows) or `~/.config/gorelo-api-browser/api-key.enc` (Linux). It is automatically loaded on subsequent launches.
 - **Skip for now** — the key is held in memory for the session only and not written to disk.
 
 The key status is always visible in the sidebar. Use the **Change** button to update it or **Remove** to delete the stored key.
@@ -67,6 +86,9 @@ npm start
 # Build Windows installer + portable exe
 npm run build
 
+# Build Linux AppImage + deb
+npm run build:linux
+
 # Build to a directory (faster, no installer — useful for testing)
 npm run build:dir
 ```
@@ -78,5 +100,5 @@ Output goes to `dist/`.
 Every push to `main` automatically:
 
 1. Bumps the patch version in `package.json` and commits it back
-2. Builds the NSIS installer and portable `.exe` on `windows-latest`
-3. Publishes a [GitHub Release](../../releases) with both files attached and auto-generated release notes
+2. Builds Windows (NSIS installer + portable `.exe`) and Linux (AppImage + `.deb`) in parallel
+3. Publishes a [GitHub Release](../../releases) with all artifacts attached and auto-generated release notes
