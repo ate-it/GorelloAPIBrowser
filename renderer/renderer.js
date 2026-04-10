@@ -27,11 +27,14 @@ function showScreen(name) {
 }
 
 // ── Bootstrap ────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   initTitleBar();
   initKeyModal();
   initApp();
   initUpdateBanner();
+
+  const appVer = await window.electronAPI.appVersion();
+  $('api-version').textContent = `v${appVer}`;
 
   $('retry-btn').addEventListener('click', loadSwagger);
 
@@ -245,7 +248,6 @@ async function loadSwagger() {
 function showWelcome(spec) {
   $('welcome-title').textContent = spec.info?.title || 'API Browser';
   $('welcome-desc').textContent  = spec.info?.description || 'Select an endpoint from the left panel to explore.';
-  $('api-version').textContent   = `v${spec.info?.version || '1.0'}`;
 
   const paths    = Object.keys(spec.paths || {});
   let opCount    = 0;
